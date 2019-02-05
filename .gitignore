@@ -1,0 +1,5 @@
+config/default.json
+node_modules/*
+logs/*
+pki/*
+node.exe
