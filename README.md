@@ -30,5 +30,5 @@ node server.js
 
 You can upload file from client like
 ```
-curl [-H "x-md5:<md5hash_for_check>"] -H "x-subdir:<subdir_on_server>" -H "x-token:<auth_token>" -F "ufile=@<some_file>" -k https://ip:port/
+curl -H "x-token:<auth_token>" [-H "x-md5:<md5hash_for_check>"] [-H "x-subdir:<subdir_on_server>"] [-H "x-ttl:<time_to_live_for_file_in_days>"] -F "ufile=@<some_file>" -k https://ip:port/
 ```

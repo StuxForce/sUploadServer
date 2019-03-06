@@ -9,12 +9,26 @@ const config = require('config');
 const https = require('https');
 const multiparty = require('multiparty');
 const fs = require('fs.extra');
+const extfs = require('extfs');
 const md5File = require('md5-file');
 const log4js = require('log4js');
+const sqlite3 = require('sqlite3').verbose();
+
+// Define database
+const db = new sqlite3.Database('./database.sqlite');
+db.serialize(() => {
+	db.run('CREATE TABLE IF NOT EXISTS uplFiles ('
+		+ 'droptime VARCHAR(1024),'
+		+ 'filename VARCHAR(1024)'
+		+ ')');
+});
 
 // Defile logger
 log4js.configure(config.get('log4js.settings'));
 const logger = log4js.getLogger(config.get('log4js.level').toString());
+
+// Start delete old files tasks
+setInterval(deleteOldFiles, config.get('server.purgeDelay'));
 
 // Prepare server settings
 const serverOptions = {
@@ -54,6 +68,7 @@ async function reqProcessing(req, res) {
 				});
 		}
 
+		setDbData(req.headers['x-ttl'], dstFile);
 		closeConnection(req, res, `200:::Upload OK, file '${dstFile}':::Upload OK!`);
 	} catch (error) {
 		closeConnection(req, res, error.message);
@@ -72,9 +87,17 @@ function checkHeaders(req) {
 	}
 
 	// Check subdir header
-	if (req.headers['x-subdir']
-		&& (/\.\./.test(req.headers['x-subdir']))) {
+	if (!req.headers['x-subdir']) {
+		req.headers['x-subdir'] = '';
+	} else if (/\.\./.test(req.headers['x-subdir'])) {
 		throw new Error(`400:::Bad subdir header '${req.headers['x-subdir']}'!:::Bad subdir!`);
+	}
+
+	// Check ttl header
+	if (!req.headers['x-ttl']) {
+		req.headers['x-ttl'] = config.get('server.defaultTtl');
+	} else if (!/^[0-9]+$/.test(req.headers['x-ttl'])) {
+		throw new Error(`400:::Bad ttl header '${req.headers['x-ttl']}'!:::Bad ttl!`);
 	}
 }
 
@@ -111,8 +134,7 @@ function parseForm(req) {
 function prepareFilePath(req) {
 	return new Promise((resolve, reject) => {
 		const dir = `${config.get('server.uploadMainDir')}/${
-			config.get(`tokens.${req.headers['x-token']}.dir`)}/${
-			(req.headers['x-subdir']) ? req.headers['x-subdir'] : ''}/`;
+			config.get(`tokens.${req.headers['x-token']}.dir`)}/${req.headers['x-subdir']}/`;
 		fs.mkdirRecursive(dir, (err) => {
 			if (err) {
 				return reject(new Error(`500:::Error creating dir '${dir}':::Upload error!`));
@@ -186,4 +208,75 @@ function closeConnection(req, res, resData) {
 	}
 	res.writeHead(code);
 	res.end(retMsg);
+}
+
+/**
+ * Set database entries
+ * @param {integer} ttl
+ * @param {string} filename
+ */
+function setDbData(ttl, filename) {
+	db.serialize(() => {
+		const dropTimeMs = new Date().getTime() + ttl * 86400 * 1000;
+		const dropTime = new Date(dropTimeMs).toISOString();
+
+		const stmt = db.prepare('INSERT INTO uplFiles VALUES (?,?)');
+		stmt.run(dropTime, filename);
+		stmt.finalize();
+	});
+}
+
+/**
+ * Remove filesystem object
+ * @param {string} path
+ */
+function deleteFsObj(path) {
+	return new Promise((resolve, reject) => {
+		fs.removeSync(path, (err) => {
+			if (err) {
+				logger.warn();
+				return reject(new Error(`Error deleting '${path}' with error message '${err}'`));
+			}
+			return resolve(true);
+		});
+	});
+}
+
+/**
+ * Delete old uploaded files
+ */
+function deleteOldFiles() {
+	db.each('SELECT * FROM uplFiles', (err, row) => {
+		if (row.droptime
+			&& row.filename
+			&& new Date().toISOString() > row.droptime) {
+			logger.info(`Deleting old file: '${row.filename}'`);
+
+			// Remove file
+			const delres = deleteFsObj(row.filename)
+				.catch((reject) => {
+					logger.warn(reject.message);
+				});
+
+			if (!delres) {
+				return;
+			}
+
+			// Remove db entry
+			db.serialize(() => {
+				const stmt = db.prepare('DELETE FROM uplFiles WHERE droptime = ? AND filename = ?');
+				stmt.run(row.droptime, row.filename);
+				stmt.finalize();
+			});
+
+			// Remove empty folders in path
+			const path = row.filename.substring(0, row.filename.lastIndexOf('/'));
+			if (extfs.isEmptySync(path)) {
+				deleteFsObj(path)
+					.catch((reject) => {
+						logger.warn(reject.message);
+					});
+			}
+		}
+	});
 }
