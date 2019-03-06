@@ -87,7 +87,7 @@ function parseForm(req) {
 		const form = new multiparty.Form({ uploadDir: config.get('server.uploadTmpDir') });
 		form.parse(req, (err, fields, files) => {
 			if (err) {
-				reject(new Error('400:::Form parse error!:::Form parse error!'));
+				return reject(new Error('400:::Form parse error!:::Form parse error!'));
 			}
 
 			if (!files
@@ -96,10 +96,9 @@ function parseForm(req) {
 				|| !files.ufile[0].originalFilename
 				|| !files.ufile[0].path
 			) {
-				reject(new Error('400:::Miss file!:::Miss file!'));
+				return reject(new Error('400:::Miss file!:::Miss file!'));
 			}
-
-			resolve([files.ufile[0].originalFilename, files.ufile[0].path]);
+			return resolve([files.ufile[0].originalFilename, files.ufile[0].path]);
 		});
 	});
 }
@@ -116,9 +115,9 @@ function prepareFilePath(req) {
 			(req.headers['x-subdir']) ? req.headers['x-subdir'] : ''}/`;
 		fs.mkdirRecursive(dir, (err) => {
 			if (err) {
-				reject(new Error(`500:::Error creating dir '${dir}':::Upload error!`));
+				return reject(new Error(`500:::Error creating dir '${dir}':::Upload error!`));
 			}
-			resolve(dir);
+			return resolve(dir);
 		});
 	});
 }
@@ -133,9 +132,9 @@ function moveFile(srcFile, dstFile) {
 		fs.move(srcFile, dstFile, (err) => {
 			if (err) {
 				unlinkFile(srcFile);
-				reject(new Error(`500:::Error moving file '${srcFile}' to '${dstFile}':::Upload error!`));
+				return reject(new Error(`500:::Error moving file '${srcFile}' to '${dstFile}':::Upload error!`));
 			}
-			resolve(true);
+			return resolve(true);
 		});
 	});
 }
@@ -150,9 +149,9 @@ function md5Check(md5, file) {
 		logger.info(`Start MD5 check for '${file}'`);
 		if (md5File.sync(file) !== md5) {
 			unlinkFile(file);
-			reject(new Error(`500:::Error checking MD5 for '${file}'!:::MD5 Error!`));
+			return reject(new Error(`500:::Error checking MD5 for '${file}'!:::MD5 Error!`));
 		}
-		resolve(true);
+		return resolve(true);
 	});
 }
 
