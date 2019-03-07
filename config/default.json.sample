@@ -4,7 +4,7 @@
     "port": 3000,
     "uploadTmpDir": "/tmp",
     "uploadMainDir": "/tmp"
-    "defaultTtl": 7,
+    "defaultTtl": 0,
     "purgeDelay": 86400
   },
   "pki": {

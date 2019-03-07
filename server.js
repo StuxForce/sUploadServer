@@ -216,6 +216,7 @@ function closeConnection(req, res, resData) {
  * @param {string} filename
  */
 function setDbData(ttl, filename) {
+	if (ttl === 0) return;
 	db.serialize(() => {
 		const dropTimeMs = new Date().getTime() + ttl * 86400 * 1000;
 		const dropTime = new Date(dropTimeMs).toISOString();
