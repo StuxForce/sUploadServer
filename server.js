@@ -28,7 +28,7 @@ log4js.configure(config.get('log4js.settings'));
 const logger = log4js.getLogger(config.get('log4js.level').toString());
 
 // Start delete old files tasks
-setInterval(deleteOldFiles, config.get('server.purgeDelay'));
+setInterval(deleteOldFiles, config.get('server.purgeDelay') * 1000);
 
 // Prepare server settings
 const serverOptions = {
