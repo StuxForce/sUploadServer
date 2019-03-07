@@ -45,7 +45,7 @@ logger.info(`Server started at ${config.get('server.ip')}:${config.get('server.p
  * Request processing function
  */
 async function reqProcessing(req, res) {
-	logger.info(`${req.connection.remoteAddress}' Start connection!`);
+	logger.info(`${req.connection.remoteAddress} Start connection!`);
 	try {
 		checkHeaders(req);
 
