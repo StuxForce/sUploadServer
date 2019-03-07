@@ -32,3 +32,12 @@ You can upload file from client like
 ```
 curl -H "x-token:<auth_token>" [-H "x-md5:<md5hash_for_check>"] [-H "x-subdir:<subdir_on_server>"] [-H "x-ttl:<time_to_live_for_file_in_days>"] -F "ufile=@<some_file>" -k https://ip:port/
 ```
+**<auth_token>** - access toket defined in ./config/default.json
+
+**<md5hash_for_check>** - client side calculated md5 for uploading file (for check at server side, if needed)
+
+**<subdir_on_server>** - subdir for uploading file on server side, if needed
+
+**<time_to_live_for_file_in_days>** - keep file on server for these count of days. Default is 0 (no remove file)
+
+**<some_file>** - path to uploading file
