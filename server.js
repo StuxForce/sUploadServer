@@ -224,6 +224,7 @@ function setDbData(ttl, filename) {
 		const stmt = db.prepare('INSERT INTO uplFiles VALUES (?,?)');
 		stmt.run(dropTime, filename);
 		stmt.finalize();
+		logger.info(`Add DB entry: '${filename}' till ${dropTime}`);
 	});
 }
 
@@ -251,7 +252,7 @@ function deleteOldFiles() {
 		if (row.droptime
 			&& row.filename
 			&& new Date().toISOString() > row.droptime) {
-			logger.info(`Deleting old file: '${row.filename}'`);
+			logger.info(`Remove old file: '${row.filename}'`);
 
 			// Remove file
 			const delres = deleteFsObj(row.filename)
@@ -268,6 +269,7 @@ function deleteOldFiles() {
 				const stmt = db.prepare('DELETE FROM uplFiles WHERE droptime = ? AND filename = ?');
 				stmt.run(row.droptime, row.filename);
 				stmt.finalize();
+				logger.info(`Remove DB entry: '${row.filename}' till ${row.droptime}`);
 			});
 
 			// Remove empty folders in path
