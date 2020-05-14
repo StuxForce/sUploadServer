@@ -34,6 +34,7 @@ setInterval(deleteOldFiles, config.get('server.purgeDelay') * 1000);
 const serverOptions = {
 	key: fs.readFileSync(config.get('pki.key')),
 	cert: fs.readFileSync(config.get('pki.cert')),
+	keepAliveTimeout: 300 * 1000,
 };
 
 // Define and start server
